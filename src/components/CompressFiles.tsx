@@ -38,7 +38,7 @@ const CompressFiles = ({ onBack }: { onBack: () => void }) => {
   const [showUpload, setShowUpload] = useState(true);
   const { toast } = useToast();
 
-  const supportedFormats = ['pdf', 'jpg', 'jpeg', 'png'];
+  const supportedFormats = ['pdf'];
   const maxFileSize = 50 * 1024 * 1024; // 50MB
 
   const getCompressionRatio = (level: string): number => {
@@ -59,7 +59,7 @@ const CompressFiles = ({ onBack }: { onBack: () => void }) => {
       if (!isValidFormat) {
         toast({
           title: "Invalid file format",
-          description: `${file.name} is not a supported format. Please use PDF, JPG, or PNG files.`,
+          description: `${file.name} is not a supported format. Please use PDF files only.`,
           variant: "destructive"
         });
         return false;
@@ -229,14 +229,6 @@ const CompressFiles = ({ onBack }: { onBack: () => void }) => {
               <div className="flex items-center space-x-2">
                 <FileText className="h-5 w-5 text-red-500" />
                 <span>PDF documents</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <FileImage className="h-5 w-5 text-blue-500" />
-                <span>JPG images</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <FileImage className="h-5 w-5 text-green-500" />
-                <span>PNG images</span>
               </div>
             </div>
             <p className="text-sm text-muted-foreground mt-2">

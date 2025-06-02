@@ -59,7 +59,8 @@ const Features = () => {
         "Format preservation",
         "Multi-language support",
         "Searchable output"
-      ]
+      ],
+      comingSoon: true
     },
     {
       icon: RefreshCw,
@@ -70,7 +71,8 @@ const Features = () => {
         "Layout preservation",
         "Font compatibility",
         "Image optimization"
-      ]
+      ],
+      comingSoon: true
     },
     {
       icon: Minimize2,
@@ -179,7 +181,14 @@ const Features = () => {
             {features.map((feature, index) => {
               const IconComponent = feature.icon;
               return (
-                <Card key={index} className="h-full">
+                <Card key={index} className="h-full relative">
+                  {feature.comingSoon && (
+                    <div className="absolute top-4 right-4 z-10">
+                      <span className="bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                        Coming Soon
+                      </span>
+                    </div>
+                  )}
                   <CardHeader>
                     <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mb-4">
                       <IconComponent className="h-6 w-6 text-blue-500" />
@@ -200,6 +209,126 @@ const Features = () => {
                 </Card>
               );
             })}
+          </div>
+        </section>
+
+        {/* About Section */}
+        <section className="py-16">
+          <h2 className="text-3xl font-bold text-center mb-12">About DocForge</h2>
+          <div className="max-w-3xl mx-auto text-center space-y-6">
+            <p className="text-lg text-muted-foreground">
+              DocForge is a lightweight, easy-to-use PDF utility tool made with real-world problems in mind.
+              Whether you're a student editing assignments or a professional cleaning up documentation, DocForge helps you merge, split, compress, and soon even extract text and convert formats—all from your browser.
+            </p>
+            <p className="text-lg text-muted-foreground">
+              No logins, no bloat, just clean document handling with modern UI.
+            </p>
+            <p className="text-lg text-muted-foreground italic">
+              Built by a student who just wanted to fix his own assignment headache, and it turned into something bigger.
+            </p>
+          </div>
+        </section>
+
+        {/* Pricing Section */}
+        <section className="py-16">
+          <h2 className="text-3xl font-bold text-center mb-12">Simple, Transparent Pricing</h2>
+          <div className="max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Basic Plan */}
+              <Card className="relative">
+                <CardHeader>
+                  <CardTitle className="text-2xl">Basic</CardTitle>
+                  <div className="mt-2">
+                    <span className="text-3xl font-bold">₹199</span>
+                    <span className="text-muted-foreground"> / $2.5</span>
+                    <p className="text-sm text-muted-foreground mt-1">One-Time Payment</p>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3">
+                    <li className="flex items-center space-x-2">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <span>Merge PDFs</span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <span>Split PDFs</span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <span>Compress PDFs</span>
+                    </li>
+                    <li className="flex items-center space-x-2 text-muted-foreground">
+                      <Clock className="h-5 w-5" />
+                      <span>20 docs/month</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              {/* Standard Plan */}
+              <Card className="relative border-blue-500">
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                    Popular
+                  </span>
+                </div>
+                <CardHeader>
+                  <CardTitle className="text-2xl">Standard</CardTitle>
+                  <div className="mt-2">
+                    <span className="text-3xl font-bold">₹399</span>
+                    <span className="text-muted-foreground"> / $5</span>
+                    <p className="text-sm text-muted-foreground mt-1">One-Time Payment</p>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3">
+                    <li className="flex items-center space-x-2">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <span>All Basic Features</span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <span>Text Extraction</span>
+                      <span className="text-xs bg-yellow-500 text-white px-2 py-0.5 rounded-full">Coming Soon</span>
+                    </li>
+                    <li className="flex items-center space-x-2 text-muted-foreground">
+                      <Clock className="h-5 w-5" />
+                      <span>50 docs/month</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              {/* Pro Plan */}
+              <Card className="relative">
+                <CardHeader>
+                  <CardTitle className="text-2xl">Pro</CardTitle>
+                  <div className="mt-2">
+                    <span className="text-3xl font-bold">₹999</span>
+                    <span className="text-muted-foreground"> / $12</span>
+                    <p className="text-sm text-muted-foreground mt-1">One-Time Payment</p>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3">
+                    <li className="flex items-center space-x-2">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <span>All Standard Features</span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <span>Format Conversion</span>
+                      <span className="text-xs bg-yellow-500 text-white px-2 py-0.5 rounded-full">Coming Soon</span>
+                    </li>
+                    <li className="flex items-center space-x-2 text-muted-foreground">
+                      <Clock className="h-5 w-5" />
+                      <span>150 docs/month</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </section>
 

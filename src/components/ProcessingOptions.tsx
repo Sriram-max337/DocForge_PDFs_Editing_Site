@@ -1,9 +1,8 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Play, ArrowLeft } from "lucide-react";
+import { RefreshCw, Play, ArrowLeft, FileText } from "lucide-react";
 
 interface ProcessingOptionsProps {
   selectedTool: string;
@@ -102,14 +101,22 @@ export const ProcessingOptions = ({ selectedTool, uploadedFiles, onBack, onProce
             {selectedTool === 'convert' && (
               <div className="space-y-4">
                 <h3 className="font-semibold">Output Format:</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {['PDF', 'DOCX', 'PPTX'].map((format) => (
-                    <Card key={format} className="p-4 cursor-pointer hover:bg-muted/20 border-2 border-transparent hover:border-blue-500/20">
-                      <div className="text-center">
-                        <Badge className="mb-2">{format}</Badge>
-                        <p className="text-xs text-muted-foreground">Convert to {format}</p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {['PDF'].map((format) => (
+                    <div
+                      key={format}
+                      className="flex items-center space-x-2 rounded-lg border p-4"
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                        <FileText className="h-5 w-5 text-blue-600" />
                       </div>
-                    </Card>
+                      <div>
+                        <p className="font-medium">{format}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {format === 'PDF' ? 'Portable Document Format' : ''}
+                        </p>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>

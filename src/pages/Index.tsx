@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { FileText, Merge, Split, Upload, Moon, Sun, Menu, X, FileArchive } from "lucide-react";
+import { FileText, Merge, Split, Upload, Moon, Sun, Menu, X, FileArchive, Type, RefreshCw } from "lucide-react";
 import { MergeDocuments } from "@/components/MergeDocuments";
 import { SplitDocuments } from "@/components/SplitDocuments";
 import CompressFiles from "@/components/CompressFiles";
@@ -117,12 +117,12 @@ const Index = () => {
                 <Link to="/features" className="text-muted-foreground hover:text-foreground transition-colors">
                   Features
                 </Link>
-                <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Link to="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">
                   Pricing
-                </a>
-                <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                </Link>
+                <Link to="/about" className="text-muted-foreground hover:text-foreground transition-colors">
                   About
-                </a>
+                </Link>
               </nav>
               
               <div className="flex items-center space-x-4">
@@ -166,12 +166,12 @@ const Index = () => {
                 <Link to="/features" className="text-muted-foreground hover:text-foreground transition-colors">
                   Features
                 </Link>
-                <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Link to="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">
                   Pricing
-                </a>
-                <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                </Link>
+                <Link to="/about" className="text-muted-foreground hover:text-foreground transition-colors">
                   About
-                </a>
+                </Link>
                 <div className="flex space-x-4 pt-4">
                   <Button variant="ghost">Login</Button>
                   <Button className="bg-blue-600 hover:bg-blue-700">Sign Up</Button>
@@ -186,23 +186,23 @@ const Index = () => {
       <section className="relative py-20 px-4 text-center">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-green-500/5"></div>
         <div className="relative max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-purple-400 to-green-400 bg-clip-text text-transparent">
-            Transform and Edit Your Documents with DocForge
+          <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
+            Transform Your PDF Documents
           </h1>
-          
-          <p className="text-xl md:text-2xl text-muted-foreground mb-8 leading-relaxed">
-            Merge, split, convert, and extract text from your documents with ease.
-            <br />
-            Support for PDF, DOCX, and PPTX files with lightning-fast processing.
+          <p className="mt-6 text-lg leading-8 text-muted-foreground">
+            Merge, split, Compress from your documents with ease.
+            Support of PDF files with lightning-fast processing.
           </p>
           
-          <Button 
-            size="lg" 
-            className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-6 rounded-xl"
-            onClick={() => document.getElementById('tools')?.scrollIntoView({ behavior: 'smooth' })}
-          >
-            Start Editing Docs
-          </Button>
+          <div className="mt-12">
+            <Button 
+              size="lg" 
+              className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-6 rounded-xl"
+              onClick={() => document.getElementById('tools')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              Start Editing Docs
+            </Button>
+          </div>
         </div>
       </section>
 
@@ -246,7 +246,7 @@ const Index = () => {
       <section className="py-16 px-4 bg-muted/20">
         <div className="max-w-6xl mx-auto text-center">
           <h2 className="text-3xl font-bold mb-12">Why Choose DocForge?</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
               <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mx-auto">
                 <Upload className="h-6 w-6 text-blue-500" />
@@ -255,18 +255,35 @@ const Index = () => {
               <p className="text-muted-foreground">Process documents in seconds with our optimized algorithms</p>
             </div>
             <div className="space-y-4">
-              <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mx-auto">
-                <FileText className="h-6 w-6 text-green-500" />
-              </div>
-              <h3 className="text-xl font-semibold">Multiple Formats</h3>
-              <p className="text-muted-foreground">Support for PDF, DOCX, PPTX files up to 10MB each</p>
-            </div>
-            <div className="space-y-4">
               <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mx-auto">
                 <FileText className="h-6 w-6 text-purple-500" />
               </div>
               <h3 className="text-xl font-semibold">Secure Processing</h3>
               <p className="text-muted-foreground">Your documents are processed securely and deleted after use</p>
+            </div>
+            <div className="space-y-4 relative">
+              <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mx-auto">
+                <Type className="h-6 w-6 text-green-500" />
+              </div>
+              <h3 className="text-xl font-semibold">Text Extraction</h3>
+              <p className="text-muted-foreground">Extract text from your documents with high accuracy</p>
+              <div className="absolute top-0 right-0 transform translate-x-1/4 -translate-y-1/4">
+                <span className="bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  Coming Soon
+                </span>
+              </div>
+            </div>
+            <div className="space-y-4 relative">
+              <div className="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center mx-auto">
+                <RefreshCw className="h-6 w-6 text-orange-500" />
+              </div>
+              <h3 className="text-xl font-semibold">Convert Files</h3>
+              <p className="text-muted-foreground">Convert between different document formats seamlessly</p>
+              <div className="absolute top-0 right-0 transform translate-x-1/4 -translate-y-1/4">
+                <span className="bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  Coming Soon
+                </span>
+              </div>
             </div>
           </div>
         </div>

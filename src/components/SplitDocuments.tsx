@@ -1,146 +1,108 @@
 import { useState, useCallback } from "react";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Upload, ArrowLeft, Download, FileText, Scissors } from "lucide-react";
+import { ArrowLeft, Upload, FileText, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { downloadFile, createSplitDocuments } from "@/utils/downloadUtils";
+import { createSplitDocuments } from "@/utils/downloadUtils";
+import { PDFDocument } from 'pdf-lib';
 
-interface SplitDocumentsProps {
-  onBack: () => void;
-}
+const acceptedTypes = ['.pdf'];
+const maxFileSize = 50 * 1024 * 1024; // 50MB
 
-export const SplitDocuments = ({ onBack }: SplitDocumentsProps) => {
+const SplitDocuments = ({ onBack }: { onBack: () => void }) => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [splitMethod, setSplitMethod] = useState<'pages' | 'ranges' | 'count'>('pages');
-  const [pageRanges, setPageRanges] = useState('');
-  const [pageCount, setPageCount] = useState(1);
-  const [selectedPages, setSelectedPages] = useState<number[]>([]);
-  const [namingPattern, setNamingPattern] = useState('page_{n}');
-  const [splitFiles, setSplitFiles] = useState<{ name: string; content: Blob }[]>([]);
+  const [splitFiles, setSplitFiles] = useState<Array<{ name: string; content: Blob }>>([]);
+  const [totalPages, setTotalPages] = useState<number>(0);
+  const [splitRange, setSplitRange] = useState<string>("");
   const { toast } = useToast();
 
-  const acceptedTypes = ['.pdf', '.docx', '.doc', '.txt', '.pptx', '.ppt'];
-  const maxFileSize = 50 * 1024 * 1024; // 50MB
+  const handleFileSelect = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
 
-  // Mock page data (in real implementation, this would come from document parsing)
-  const totalPages = 12;
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
-
-  const validateFile = (file: File) => {
+    const file = files[0];
     const extension = '.' + file.name.split('.').pop()?.toLowerCase();
+    
     if (!acceptedTypes.includes(extension)) {
       toast({
         title: "Invalid file type",
-        description: "Please upload PDF, Word, TXT, or PowerPoint files only.",
+        description: "Please upload PDF files only.",
         variant: "destructive",
       });
-      return false;
+      return;
     }
+
     if (file.size > maxFileSize) {
       toast({
         title: "File too large",
-        description: "Please upload files smaller than 50MB.",
+        description: `${file.name} exceeds the 50MB limit.`,
         variant: "destructive",
       });
-      return false;
+      return;
     }
-    return true;
-  };
 
-  const handleFileSelect = useCallback((files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    
-    const file = files[0];
-    if (validateFile(file)) {
+    try {
+      // Load PDF to get total pages
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfDoc = await PDFDocument.load(arrayBuffer);
+      const pages = pdfDoc.getPageCount();
+      setTotalPages(pages);
       setUploadedFile(file);
-      setSelectedPages([]);
-      setSplitFiles([]);
-      setProgress(0);
+    } catch (error) {
+      console.error('Error loading PDF:', error);
       toast({
-        title: "File uploaded successfully",
-        description: `${file.name} is ready for splitting.`,
+        title: "Error loading PDF",
+        description: "Could not load the PDF file. Please try again.",
+        variant: "destructive",
       });
     }
-  }, [toast]);
+  };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragOver(false);
     handleFileSelect(e.dataTransfer.files);
-  }, [handleFileSelect]);
+  }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragOver(true);
   }, []);
 
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  }, []);
-
-  const togglePageSelection = (page: number) => {
-    setSelectedPages(prev => 
-      prev.includes(page) 
-        ? prev.filter(p => p !== page)
-        : [...prev, page].sort((a, b) => a - b)
-    );
-  };
-
-  const parsePageRanges = (ranges: string): number[] => {
+  const parsePageRanges = (rangeStr: string): number[] => {
+    const ranges = rangeStr.split(',').map(r => r.trim());
     const pages: number[] = [];
-    const parts = ranges.split(',').map(part => part.trim());
     
-    for (const part of parts) {
-      if (part.includes('-')) {
-        const [start, end] = part.split('-').map(n => parseInt(n.trim()));
-        if (!isNaN(start) && !isNaN(end) && start <= end) {
-          for (let i = start; i <= Math.min(end, totalPages); i++) {
-            if (!pages.includes(i)) pages.push(i);
+    for (const range of ranges) {
+      if (range.includes('-')) {
+        const [start, end] = range.split('-').map(n => parseInt(n.trim()));
+        if (!isNaN(start) && !isNaN(end) && start > 0 && end <= totalPages && start <= end) {
+          for (let i = start; i <= end; i++) {
+            pages.push(i);
           }
         }
       } else {
-        const page = parseInt(part);
-        if (!isNaN(page) && page >= 1 && page <= totalPages && !pages.includes(page)) {
+        const page = parseInt(range);
+        if (!isNaN(page) && page > 0 && page <= totalPages) {
           pages.push(page);
         }
       }
     }
     
-    return pages.sort((a, b) => a - b);
+    return [...new Set(pages)].sort((a, b) => a - b);
   };
 
   const handleSplit = async () => {
     if (!uploadedFile) return;
 
-    let pagesToSplit: number[] = [];
-    
-    switch (splitMethod) {
-      case 'pages':
-        pagesToSplit = selectedPages;
-        break;
-      case 'ranges':
-        pagesToSplit = parsePageRanges(pageRanges);
-        break;
-      case 'count':
-        // Split by page count (every N pages)
-        for (let i = 1; i <= totalPages; i += pageCount) {
-          pagesToSplit.push(i);
-        }
-        break;
-    }
-
-    if (pagesToSplit.length === 0) {
+    const pageNumbers = parsePageRanges(splitRange);
+    if (pageNumbers.length === 0) {
       toast({
-        title: "No pages selected",
-        description: "Please select pages to split.",
+        title: "Invalid page range",
+        description: "Please enter valid page numbers or ranges (e.g., '1-3,5,7-9').",
         variant: "destructive",
       });
       return;
@@ -148,148 +110,121 @@ export const SplitDocuments = ({ onBack }: SplitDocumentsProps) => {
 
     setIsProcessing(true);
     setProgress(0);
-    setSplitFiles([]);
 
     try {
-      // Create split files using actual file content
-      const files = await createSplitDocuments(uploadedFile, pagesToSplit, namingPattern);
-      
-      // Simulate progress for UI feedback
-      const interval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setSplitFiles(files);
-            setIsProcessing(false);
-            toast({
-              title: "Split Complete!",
-              description: `Document split into ${pagesToSplit.length} files.`,
-            });
-            return 100;
-          }
-          return prev + 8;
-        });
-      }, 200);
-    } catch (error) {
-      console.error('Split error:', error);
-      setIsProcessing(false);
+      const baseName = uploadedFile.name.replace('.pdf', '');
+      const splitResults = await createSplitDocuments(
+        uploadedFile,
+        pageNumbers,
+        `${baseName}_part{n}`
+      );
+
+      setSplitFiles(splitResults);
       toast({
-        title: "Split Failed",
-        description: "An error occurred while splitting the document.",
+        title: "Split complete",
+        description: "Your PDF has been split successfully.",
+      });
+    } catch (error) {
+      console.error('Error during split:', error);
+      toast({
+        title: "Split failed",
+        description: "An error occurred while splitting the PDF.",
         variant: "destructive",
       });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleDownloadFile = (file: { name: string; content: Blob }) => {
-    try {
-      downloadFile(file.content, file.name, file.content.type);
-      toast({
-        title: "Download Started",
-        description: `Downloading ${file.name}`,
-      });
-    } catch (error) {
-      console.error('Download error:', error);
-      toast({
-        title: "Download Failed",
-        description: "An error occurred while downloading the file.",
-        variant: "destructive",
-      });
-    }
+    const url = URL.createObjectURL(file.content);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
-  const formatFileSize = (bytes: number) => {
+  const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB'];
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center space-x-3">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft className="h-5 w-5" />
+      <div className="flex items-center space-x-4">
+        <Button variant="ghost" onClick={onBack} className="flex items-center space-x-2">
+          <ArrowLeft className="h-4 w-4" />
+          <span>Back to Tools</span>
         </Button>
         <div>
-          <h2 className="text-2xl font-bold">Split Documents</h2>
-          <p className="text-muted-foreground">Extract pages from your document</p>
+          <h1 className="text-2xl font-bold flex items-center space-x-2">
+            <Upload className="h-6 w-6 text-blue-500" />
+            <span>Split PDF Files</span>
+          </h1>
+          <p className="text-muted-foreground">Split PDF files into multiple documents</p>
         </div>
       </div>
+
+      {/* Supported Formats */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Supported File Types</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex space-x-6">
+            <div className="flex items-center space-x-2">
+              <FileText className="h-5 w-5 text-red-500" />
+              <span>PDF documents</span>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">
+            Maximum file size: 50MB per file
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Upload Area */}
       {!uploadedFile && (
         <Card className="border-2 border-dashed border-border/50">
           <div className="p-8">
             <div
-              className={`relative border-2 border-dashed rounded-xl p-12 text-center transition-all duration-300 ${
-                isDragOver
-                  ? 'border-green-500 bg-green-500/5'
-                  : 'border-border/50 hover:border-green-500/50 hover:bg-green-500/5'
-              }`}
+              className="relative border-2 border-dashed rounded-xl p-12 text-center transition-all duration-300 hover:border-blue-500/50 hover:bg-blue-500/5"
               onDrop={handleDrop}
               onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
             >
               <div className="space-y-4">
-                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
-                  <Upload className="h-8 w-8 text-green-500" />
+                <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto">
+                  <Upload className="h-8 w-8 text-blue-500" />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold mb-2">Drop your file here, or click to browse</h3>
                   <p className="text-muted-foreground">
-                    Single PDF, Word, TXT, or PowerPoint file (max 50MB)
+                    Single PDF file (max 50MB)
                   </p>
                 </div>
                 <Button
                   variant="outline"
                   onClick={() => document.getElementById('split-file-input')?.click()}
-                  className="border-green-500/50 text-green-500 hover:bg-green-500/10"
+                  className="border-blue-500/50 text-blue-500 hover:bg-blue-500/10"
                 >
                   Choose File
                 </Button>
+                <input
+                  id="split-file-input"
+                  type="file"
+                  accept=".pdf"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  onChange={(e) => handleFileSelect(e.target.files)}
+                  aria-label="Upload PDF file to split"
+                />
               </div>
-              <input
-                id="split-file-input"
-                type="file"
-                accept=".pdf,.docx,.doc,.txt,.pptx,.ppt"
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                onChange={(e) => handleFileSelect(e.target.files)}
-              />
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* File Info */}
-      {uploadedFile && (
-        <Card className="border border-border/50">
-          <div className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
-                  <FileText className="h-6 w-6 text-green-500" />
-                </div>
-                <div>
-                  <p className="font-medium">{uploadedFile.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatFileSize(uploadedFile.size)} • {totalPages} pages
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setUploadedFile(null);
-                  setSplitFiles([]);
-                  setProgress(0);
-                }}
-                className="text-red-500 hover:bg-red-500/10"
-              >
-                Remove
-              </Button>
             </div>
           </div>
         </Card>
@@ -298,129 +233,69 @@ export const SplitDocuments = ({ onBack }: SplitDocumentsProps) => {
       {/* Split Options */}
       {uploadedFile && (
         <Card className="border border-border/50">
-          <div className="p-6 space-y-6">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Scissors className="h-5 w-5 text-green-500" />
-              Split Options
-            </h3>
-
-            {/* Split Method Selection */}
-            <div className="space-y-4">
-              <Label>Split Method</Label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card 
-                  className={`p-4 cursor-pointer transition-all ${splitMethod === 'pages' ? 'border-green-500 bg-green-500/5' : 'hover:bg-muted/20'}`}
-                  onClick={() => setSplitMethod('pages')}
-                >
-                  <h4 className="font-medium mb-2">Select Pages</h4>
-                  <p className="text-sm text-muted-foreground">Choose specific pages to extract</p>
-                </Card>
-                <Card 
-                  className={`p-4 cursor-pointer transition-all ${splitMethod === 'ranges' ? 'border-green-500 bg-green-500/5' : 'hover:bg-muted/20'}`}
-                  onClick={() => setSplitMethod('ranges')}
-                >
-                  <h4 className="font-medium mb-2">Page Ranges</h4>
-                  <p className="text-sm text-muted-foreground">Use ranges like 1-5, 8, 11-13</p>
-                </Card>
-                <Card 
-                  className={`p-4 cursor-pointer transition-all ${splitMethod === 'count' ? 'border-green-500 bg-green-500/5' : 'hover:bg-muted/20'}`}
-                  onClick={() => setSplitMethod('count')}
-                >
-                  <h4 className="font-medium mb-2">Every N Pages</h4>
-                  <p className="text-sm text-muted-foreground">Split by page count intervals</p>
-                </Card>
-              </div>
-            </div>
-
-            {/* Method-specific Options */}
-            {splitMethod === 'pages' && (
-              <div className="space-y-4">
-                <Label>Select Pages to Extract</Label>
-                <div className="grid grid-cols-6 md:grid-cols-12 gap-2">
-                  {pages.map(page => (
-                    <div key={page} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`page-${page}`}
-                        checked={selectedPages.includes(page)}
-                        onCheckedChange={() => togglePageSelection(page)}
-                      />
-                      <Label htmlFor={`page-${page}`} className="text-sm cursor-pointer">
-                        {page}
-                      </Label>
-                    </div>
-                  ))}
+          <div className="p-6">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <FileText className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{uploadedFile.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatFileSize(uploadedFile.size)} • {totalPages} pages
+                    </p>
+                  </div>
                 </div>
-                {selectedPages.length > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    Selected pages: {selectedPages.join(', ')}
-                  </p>
-                )}
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setUploadedFile(null);
+                    setTotalPages(0);
+                    setSplitRange("");
+                  }}
+                  className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                >
+                  Remove
+                </Button>
               </div>
-            )}
 
-            {splitMethod === 'ranges' && (
+              {/* Split Range Input */}
               <div className="space-y-2">
-                <Label htmlFor="page-ranges">Page Ranges</Label>
+                <Label htmlFor="split-range">Page Range</Label>
                 <Input
-                  id="page-ranges"
-                  value={pageRanges}
-                  onChange={(e) => setPageRanges(e.target.value)}
-                  placeholder="e.g., 1-5, 8, 11-13"
+                  id="split-range"
+                  value={splitRange}
+                  onChange={(e) => setSplitRange(e.target.value)}
+                  placeholder={`Enter page numbers or ranges (e.g., 1-3,5,7-9) (1-${totalPages})`}
+                  className="font-mono"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Use commas to separate ranges. Example: 1-3, 5, 7-9
+                <p className="text-sm text-muted-foreground">
+                  Enter page numbers or ranges separated by commas. For example: 1-3,5,7-9
                 </p>
               </div>
-            )}
 
-            {splitMethod === 'count' && (
-              <div className="space-y-2">
-                <Label htmlFor="page-count">Pages per split</Label>
-                <Input
-                  id="page-count"
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={pageCount}
-                  onChange={(e) => setPageCount(parseInt(e.target.value) || 1)}
-                />
-              </div>
-            )}
-
-            {/* Naming Pattern */}
-            <div className="space-y-2">
-              <Label htmlFor="naming-pattern">File Naming Pattern</Label>
-              <Input
-                id="naming-pattern"
-                value={namingPattern}
-                onChange={(e) => setNamingPattern(e.target.value)}
-                placeholder="page_{n}"
-              />
-              <p className="text-xs text-muted-foreground">
-                Use {'{n}'} for page numbers. Example: document_page_{'{n}'}
-              </p>
-            </div>
-
-            {/* Progress */}
-            {isProcessing && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Splitting document...</span>
-                  <span>{progress}%</span>
+              {/* Progress */}
+              {isProcessing && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Splitting document...</span>
+                    <span>{progress}%</span>
+                  </div>
+                  <Progress value={progress} className="w-full" />
                 </div>
-                <Progress value={progress} className="w-full" />
-              </div>
-            )}
+              )}
 
-            {/* Actions */}
-            <div className="flex gap-4">
-              <Button
-                onClick={handleSplit}
-                disabled={isProcessing}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {isProcessing ? "Splitting..." : "Start Split"}
-              </Button>
+              {/* Actions */}
+              <div className="flex gap-4">
+                <Button
+                  onClick={handleSplit}
+                  disabled={isProcessing || !splitRange.trim()}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {isProcessing ? "Splitting..." : "Start Split"}
+                </Button>
+              </div>
             </div>
           </div>
         </Card>
@@ -464,3 +339,5 @@ export const SplitDocuments = ({ onBack }: SplitDocumentsProps) => {
     </div>
   );
 };
+
+export { SplitDocuments };

@@ -1,5 +1,4 @@
-
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload, X, FileText } from "lucide-react";
@@ -12,43 +11,55 @@ interface FileUploadProps {
 }
 
 export const FileUpload = ({ selectedTool, onFilesUploaded, onNext }: FileUploadProps) => {
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [isDragOver, setIsDragOver] = useState(false);
   const { toast } = useToast();
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const acceptedTypes = ['.pdf', '.docx', '.pptx'];
-  const maxFileSize = 10 * 1024 * 1024; // 10MB
+  const acceptedTypes = ['.pdf'];
 
-  const validateFile = (file: File) => {
-    const extension = '.' + file.name.split('.').pop()?.toLowerCase();
-    if (!acceptedTypes.includes(extension)) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload PDF, DOCX, or PPTX files only.",
-        variant: "destructive",
-      });
-      return false;
-    }
-    if (file.size > maxFileSize) {
-      toast({
-        title: "File too large",
-        description: "Please upload files smaller than 10MB.",
-        variant: "destructive",
-      });
-      return false;
-    }
-    return true;
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
   };
 
-  const handleFileSelect = useCallback((files: FileList | null) => {
-    if (!files) return;
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
 
-    const validFiles: File[] = [];
-    Array.from(files).forEach(file => {
-      if (validateFile(file)) {
-        validFiles.push(file);
+  const validateFiles = (files: File[]): File[] => {
+    return files.filter(file => {
+      const extension = file.name.split('.').pop()?.toLowerCase();
+      const isValidFormat = extension && acceptedTypes.includes(`.${extension}`);
+      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB limit
+
+      if (!isValidFormat) {
+        toast({
+          title: "Invalid file format",
+          description: "Please upload PDF files only.",
+          variant: "destructive"
+        });
+        return false;
       }
+
+      if (!isValidSize) {
+        toast({
+          title: "File too large",
+          description: "Maximum file size is 10MB.",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      return true;
     });
+  };
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+
+    const validFiles = validateFiles(Array.from(e.target.files));
 
     if (validFiles.length > 0) {
       const newFiles = [...uploadedFiles, ...validFiles];
@@ -63,19 +74,16 @@ export const FileUpload = ({ selectedTool, onFilesUploaded, onNext }: FileUpload
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragOver(false);
-    handleFileSelect(e.dataTransfer.files);
-  }, [handleFileSelect]);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  }, []);
+    setIsDragging(false);
+    const files = e.dataTransfer.files;
+    if (files) {
+      const validFiles = validateFiles(Array.from(files));
+      if (validFiles.length > 0) {
+        setUploadedFiles(prev => [...prev, ...validFiles]);
+        onFilesUploaded(validFiles);
+      }
+    }
+  }, [onFilesUploaded]);
 
   const removeFile = (index: number) => {
     const newFiles = uploadedFiles.filter((_, i) => i !== index);
@@ -110,7 +118,7 @@ export const FileUpload = ({ selectedTool, onFilesUploaded, onNext }: FileUpload
 
           <div
             className={`relative border-2 border-dashed rounded-xl p-12 text-center transition-all duration-300 ${
-              isDragOver
+              isDragging
                 ? 'border-blue-500 bg-blue-500/5'
                 : 'border-border/50 hover:border-blue-500/50 hover:bg-blue-500/5'
             }`}
@@ -122,27 +130,30 @@ export const FileUpload = ({ selectedTool, onFilesUploaded, onNext }: FileUpload
               <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto">
                 <Upload className="h-8 w-8 text-blue-500" />
               </div>
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Drop your files here, or click to browse</h3>
-                <p className="text-muted-foreground">
-                  Supports PDF, DOCX, and PPTX files up to 10MB each
+              <div className="text-center space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Supports PDF files up to 10MB each
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Drag and drop your files here, or click to browse
                 </p>
               </div>
               <Button
                 variant="outline"
-                onClick={() => document.getElementById('file-input')?.click()}
+                onClick={() => fileInputRef.current?.click()}
                 className="border-blue-500/50 text-blue-500 hover:bg-blue-500/10"
               >
                 Choose Files
               </Button>
             </div>
             <input
-              id="file-input"
               type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="hidden"
               multiple
-              accept=".pdf,.docx,.pptx"
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              onChange={(e) => handleFileSelect(e.target.files)}
+              accept=".pdf"
+              aria-label="Upload PDF files"
             />
           </div>
         </div>

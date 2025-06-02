@@ -1,6 +1,5 @@
-
 import { useState, useCallback } from "react";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
@@ -22,15 +21,16 @@ export const MergeDocuments = ({ onBack }: MergeDocumentsProps) => {
   const [mergedBlob, setMergedBlob] = useState<Blob | null>(null);
   const { toast } = useToast();
 
-  const acceptedTypes = ['.pdf', '.docx', '.doc', '.txt', '.pptx', '.ppt'];
+  const acceptedTypes = ['.pdf'];
   const maxTotalSize = 100 * 1024 * 1024; // 100MB
+  const maxFileSize = 50 * 1024 * 1024; // 50MB
 
   const validateFile = (file: File) => {
     const extension = '.' + file.name.split('.').pop()?.toLowerCase();
     if (!acceptedTypes.includes(extension)) {
       toast({
         title: "Invalid file type",
-        description: "Please upload PDF, Word, TXT, or PowerPoint files only.",
+        description: "Please upload PDF files only.",
         variant: "destructive",
       });
       return false;
@@ -209,6 +209,36 @@ export const MergeDocuments = ({ onBack }: MergeDocumentsProps) => {
     return uploadedFiles.reduce((sum, file) => sum + file.size, 0);
   };
 
+  const handleFileUpload = (files: File[]) => {
+    const validFiles = files.filter(file => {
+      const extension = file.name.split('.').pop()?.toLowerCase();
+      const isValidFormat = extension && acceptedTypes.includes(`.${extension}`);
+      const isValidSize = file.size <= maxFileSize;
+      
+      if (!isValidFormat) {
+        toast({
+          title: "Invalid file format",
+          description: "Please upload PDF files only.",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
+      if (!isValidSize) {
+        toast({
+          title: "File too large",
+          description: `${file.name} exceeds the 50MB limit.`,
+          variant: "destructive"
+        });
+        return false;
+      }
+      
+      return true;
+    });
+
+    setUploadedFiles(prev => [...prev, ...validFiles]);
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -242,7 +272,7 @@ export const MergeDocuments = ({ onBack }: MergeDocumentsProps) => {
               <div>
                 <h3 className="text-lg font-semibold mb-2">Drop your files here, or click to browse</h3>
                 <p className="text-muted-foreground">
-                  Supports PDF, Word, TXT, and PowerPoint files (max 100MB total)
+                  Supports PDF files (max 50MB total)
                 </p>
               </div>
               <Button
@@ -257,9 +287,10 @@ export const MergeDocuments = ({ onBack }: MergeDocumentsProps) => {
               id="merge-file-input"
               type="file"
               multiple
-              accept=".pdf,.docx,.doc,.txt,.pptx,.ppt"
+              accept=".pdf"
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               onChange={(e) => handleFileSelect(e.target.files)}
+              aria-label="Upload PDF files to merge"
             />
           </div>
         </div>
